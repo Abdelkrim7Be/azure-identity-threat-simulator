@@ -8,6 +8,8 @@ __pycache__/
 .ruff_cache/
 .venv/
 simulator/.venv/
+venv/
+simulator/venv/
 
 # Node / Vite
 node_modules/
