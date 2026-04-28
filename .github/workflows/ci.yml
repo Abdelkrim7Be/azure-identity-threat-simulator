@@ -38,4 +38,3 @@ jobs:
         run: npm ci
       - name: Build dashboard
         run: npm run build
-
