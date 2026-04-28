@@ -11,6 +11,11 @@ simulator/.venv/
 venv/
 simulator/venv/
 
+# Env files (secrets)
+.env
+.env.*
+!.env.example
+
 # Node / Vite
 node_modules/
 dashboard/node_modules/
