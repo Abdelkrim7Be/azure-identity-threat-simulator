@@ -1,24 +1,30 @@
 from __future__ import annotations
 
 import json
+import os
 import threading
 import time
 import uuid
 from dataclasses import asdict, dataclass
 from datetime import datetime, timezone
+from pathlib import Path
 from typing import Any, Literal
 
 import requests
-from azure.identity import DefaultAzureCredential
+from azure.identity import ClientSecretCredential
 from azure.keyvault.secrets import SecretClient
 from azure.storage.blob import BlobServiceClient
-from flask import Flask, jsonify, request
+from dotenv import load_dotenv
+from flask import Flask, jsonify
 from flask_cors import CORS
 
 from config import load_config
 
 Severity = Literal["critical", "warning", "info"]
 Result = Literal["success", "failed", "blocked", "stopped"]
+
+# Load .env from project root (one level above /simulator)
+load_dotenv(dotenv_path=Path(__file__).resolve().parents[1] / ".env")
 
 
 def _utc_now_iso() -> str:
@@ -47,7 +53,19 @@ class AttackSimulator:
         self._stop_event = threading.Event()
 
         self._config = load_config()
-        self._credential = DefaultAzureCredential()
+        self._attacker_client_id = os.environ.get("ATTACKER_CLIENT_ID", "").strip()
+        self._attacker_tenant_id = os.environ.get("ATTACKER_TENANT_ID", "").strip()
+        self._attacker_client_secret = os.environ.get("ATTACKER_CLIENT_SECRET", "").strip()
+        self._credential = self._build_attacker_credential()
+
+    def _build_attacker_credential(self) -> ClientSecretCredential | None:
+        if not (self._attacker_client_id and self._attacker_tenant_id and self._attacker_client_secret):
+            return None
+        return ClientSecretCredential(
+            tenant_id=self._attacker_tenant_id,
+            client_id=self._attacker_client_id,
+            client_secret=self._attacker_client_secret,
+        )
 
     def reset(self) -> None:
         with self._lock:
@@ -68,6 +86,9 @@ class AttackSimulator:
                     "storage_account_name": self._config.storage_account_name,
                     "storage_container_name": self._config.storage_container_name,
                     "subscription_id_set": bool(self._config.subscription_id),
+                    "attacker_client_id_set": bool(self._attacker_client_id),
+                    "attacker_tenant_id_set": bool(self._attacker_tenant_id),
+                    "attacker_client_secret_set": bool(self._attacker_client_secret),
                 },
             }
 
@@ -122,6 +143,18 @@ class AttackSimulator:
 
     def _run(self) -> None:
         try:
+            if self._credential is None:
+                self._emit(
+                    step="Attacker credential missing",
+                    target="Local",
+                    mitre_tactic="Initial Access",
+                    mitre_technique="T1078 (Valid Accounts)",
+                    severity="critical",
+                    result="failed",
+                    details="Missing ATTACKER_CLIENT_ID / ATTACKER_CLIENT_SECRET / ATTACKER_TENANT_ID in .env (or environment).",
+                )
+                return
+
             self._emit(
                 step="Initial access (simulated)",
                 target="Azure",
@@ -129,7 +162,7 @@ class AttackSimulator:
                 mitre_technique="T1078 (Valid Accounts)",
                 severity="info",
                 result="success",
-                details="Starting simulation with DefaultAzureCredential.",
+                details="Starting simulation with attacker ClientSecretCredential.",
             )
 
             self._simulate_stolen_token_keyvault_access()
