@@ -5,6 +5,7 @@
 Azure Identity Threat Simulator is a demo-ready project that **simulates identity-driven cloud attacks** on Azure and streams the resulting telemetry to a **real-time dashboard**.
 
 The simulator emulates common attacker behaviors such as:
+
 - attempting **Key Vault secret discovery and read**
 - **Azure Resource Manager (ARM) enumeration**
 - **Storage Blob discovery and sample download (exfil attempt)**
@@ -33,8 +34,8 @@ All actions are timestamped and tagged with an **outcome** (`success` / `failed`
 
 ### Tech stack
 
-- **Backend**: Python 3.11, Flask, flask-cors, requests  
-- **Azure SDK**: azure-identity, azure-keyvault-secrets, azure-storage-blob  
+- **Backend**: Python 3.11, Flask, flask-cors, requests
+- **Azure SDK**: azure-identity, azure-keyvault-secrets, azure-storage-blob
 - **Auth model (attacker)**: Service Principal via **`ClientSecretCredential`** loaded from `.env`
 - **Frontend**: React + Vite, Tailwind CSS, Recharts
 - **Detection**: KQL queries (`detection/kql_queries.md`)
@@ -103,6 +104,7 @@ python attack_simulator.py
 API base URL: `http://127.0.0.1:5000`
 
 Endpoints:
+
 - `GET /events`
 - `POST /start-attack`
 - `POST /stop-attack`
@@ -128,19 +130,17 @@ Dashboard URL (default): `http://localhost:5173`
 
 ## MITRE ATT&CK mapping (demo)
 
-| Simulator step | MITRE tactic | MITRE technique |
-|---|---|---|
-| Initial access (simulated) | Initial Access | T1078 - Valid Accounts |
-| Key Vault access attempt | Credential Access | T1528 - Steal Application Access Token (simulated) |
-| Key Vault enumeration | Discovery | T1526 - Cloud Service Discovery |
-| Key Vault secret read | Collection | T1005 - Data from Local System (cloud analog) |
-| ARM resource enumeration | Discovery | T1526 - Cloud Service Discovery |
-| Storage enumeration + sample download | Exfiltration | T1020 - Automated Exfiltration |
-| Simulation stopped | Impact | T1489 - Service Stop |
+| Simulator step                        | MITRE tactic      | MITRE technique                                    |
+| ------------------------------------- | ----------------- | -------------------------------------------------- |
+| Initial access (simulated)            | Initial Access    | T1078 - Valid Accounts                             |
+| Key Vault access attempt              | Credential Access | T1528 - Steal Application Access Token (simulated) |
+| Key Vault enumeration                 | Discovery         | T1526 - Cloud Service Discovery                    |
+| Key Vault secret read                 | Collection        | T1005 - Data from Local System (cloud analog)      |
+| ARM resource enumeration              | Discovery         | T1526 - Cloud Service Discovery                    |
+| Storage enumeration + sample download | Exfiltration      | T1020 - Automated Exfiltration                     |
+| Simulation stopped                    | Impact            | T1489 - Service Stop                               |
 
 ## Author
 
 **Abdelkrim BELLAGNECH**  
 ENSIBS × ENSET — Double Diploma in Cybersecurity
-
-
