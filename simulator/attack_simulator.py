@@ -23,12 +23,20 @@ from config import load_config
 Severity = Literal["critical", "warning", "info"]
 Result = Literal["success", "failed", "blocked", "stopped"]
 
-# Load .env from project root (one level above /simulator)
+# .env lives at the repo root while the API runs from simulator/.
 load_dotenv(dotenv_path=Path(__file__).resolve().parents[1] / ".env")
 
 
 def _utc_now_iso() -> str:
     return datetime.now(timezone.utc).isoformat()
+
+
+def _is_blocked_error(message: str) -> bool:
+    lower = message.lower()
+    return any(
+        word in lower
+        for word in ("forbidden", "permission", "authorization")
+    )
 
 
 @dataclass(frozen=True)
@@ -59,7 +67,11 @@ class AttackSimulator:
         self._credential = self._build_attacker_credential()
 
     def _build_attacker_credential(self) -> ClientSecretCredential | None:
-        if not (self._attacker_client_id and self._attacker_tenant_id and self._attacker_client_secret):
+        if not (
+            self._attacker_client_id
+            and self._attacker_tenant_id
+            and self._attacker_client_secret
+        ):
             return None
         return ClientSecretCredential(
             tenant_id=self._attacker_tenant_id,
@@ -83,9 +95,9 @@ class AttackSimulator:
                 "config": {
                     "resource_group": self._config.resource_group,
                     "keyvault_name": self._config.keyvault_name,
+                    "keyvault_secret_name_set": bool(self._config.keyvault_secret_name),
                     "storage_account_name": self._config.storage_account_name,
                     "storage_container_name": self._config.storage_container_name,
-                    "subscription_id_set": bool(self._config.subscription_id),
                     "attacker_client_id_set": bool(self._attacker_client_id),
                     "attacker_tenant_id_set": bool(self._attacker_tenant_id),
                     "attacker_client_secret_set": bool(self._attacker_client_secret),
@@ -102,7 +114,11 @@ class AttackSimulator:
                 return False
             self._running = True
             self._stop_event.clear()
-            self._thread = threading.Thread(target=self._run, name="attack-simulator", daemon=True)
+            self._thread = threading.Thread(
+                target=self._run,
+                name="attack-simulator",
+                daemon=True,
+            )
             self._thread.start()
             return True
 
@@ -204,8 +220,7 @@ class AttackSimulator:
         if self._stopped():
             return
 
-        # NOTE: We don't actually "steal" anything; we simulate behavior by attempting
-        # sensitive operations and recording whether Azure allows/blocks them.
+        # Simulates token abuse by recording whether Azure allows sensitive operations.
         target = self._config.keyvault_url
         self._emit(
             step="Stolen token (simulated): Key Vault access",
@@ -247,11 +262,22 @@ class AttackSimulator:
                 mitre_technique="T1526 (Cloud Service Discovery)",
                 severity="warning",
                 result="success",
-                details=f"Found {len(names)} secret name(s) (showing up to 10): {', '.join(names)}",
+                details=f"Found {len(names)} secret name(s); names are not logged.",
             )
 
-            # Attempt to read one secret (this is the "impactful" step).
-            secret_name = names[0]
+            secret_name = self._config.keyvault_secret_name or names[0]
+            if secret_name not in names:
+                self._emit(
+                    step="Key Vault configured secret check",
+                    target=f"{target}secrets/{secret_name}",
+                    mitre_tactic="Collection",
+                    mitre_technique="T1005 (Data from Local System) [cloud analog]",
+                    severity="warning",
+                    result="failed",
+                    details="Configured demo secret was not found in the vault.",
+                )
+                return
+
             _ = client.get_secret(secret_name)
             self._emit(
                 step="Key Vault secret read",
@@ -262,16 +288,15 @@ class AttackSimulator:
                 result="success",
                 details=f"Successfully read secret '{secret_name}' (value not logged).",
             )
-        except Exception as e:  # noqa: BLE001
+        except Exception as e:
             msg = f"{type(e).__name__}: {e}"
-            blocked = "forbidden" in msg.lower() or "permission" in msg.lower() or "authorization" in msg.lower()
             self._emit(
                 step="Key Vault access attempt",
                 target=target,
                 mitre_tactic="Credential Access",
                 mitre_technique="T1528 (Steal Application Access Token)",
                 severity="critical",
-                result="blocked" if blocked else "failed",
+                result="blocked" if _is_blocked_error(msg) else "failed",
                 details=msg[:500],
             )
 
@@ -281,21 +306,9 @@ class AttackSimulator:
         if self._stopped():
             return
 
-        if not self._config.subscription_id:
-            self._emit(
-                step="Azure resource enumeration",
-                target="ARM",
-                mitre_tactic="Discovery",
-                mitre_technique="T1087 (Account Discovery)",
-                severity="info",
-                result="failed",
-                details="AZURE_SUBSCRIPTION_ID not set; skipping ARM enumeration.",
-            )
-            return
-
         self._emit(
             step="Azure resource enumeration",
-            target=f"subscription/{self._config.subscription_id}",
+            target=f"resourceGroup/{self._config.resource_group}",
             mitre_tactic="Discovery",
             mitre_technique="T1526 (Cloud Service Discovery)",
             severity="info",
@@ -310,12 +323,17 @@ class AttackSimulator:
                 f"{self._config.subscription_id}/resourceGroups/{self._config.resource_group}/resources"
             )
             params = {"api-version": "2021-04-01"}
-            resp = requests.get(url, headers={"Authorization": f"Bearer {token}"}, params=params, timeout=20)
+            resp = requests.get(
+                url,
+                headers={"Authorization": f"Bearer {token}"},
+                params=params,
+                timeout=20,
+            )
 
             if resp.status_code in (401, 403):
                 self._emit(
                     step="ARM enumeration blocked",
-                    target=url,
+                    target=f"resourceGroup/{self._config.resource_group}",
                     mitre_tactic="Discovery",
                     mitre_technique="T1526 (Cloud Service Discovery)",
                     severity="warning",
@@ -328,28 +346,34 @@ class AttackSimulator:
             data = resp.json()
             values = data.get("value", [])
             sample = [
-                {"name": r.get("name"), "type": r.get("type"), "location": r.get("location")}
+                {
+                    "name": r.get("name"),
+                    "type": r.get("type"),
+                    "location": r.get("location"),
+                }
                 for r in values[:10]
             ]
             self._emit(
                 step="ARM enumeration results",
-                target=url,
+                target=f"resourceGroup/{self._config.resource_group}",
                 mitre_tactic="Discovery",
                 mitre_technique="T1526 (Cloud Service Discovery)",
                 severity="info",
                 result="success",
-                details=json.dumps({"count": len(values), "sample": sample}, ensure_ascii=False)[:900],
+                details=json.dumps(
+                    {"count": len(values), "sample": sample},
+                    ensure_ascii=False,
+                )[:900],
             )
-        except Exception as e:  # noqa: BLE001
+        except Exception as e:
             msg = f"{type(e).__name__}: {e}"
-            blocked = "forbidden" in msg.lower() or "permission" in msg.lower() or "authorization" in msg.lower()
             self._emit(
                 step="ARM enumeration error",
                 target="ARM",
                 mitre_tactic="Discovery",
                 mitre_technique="T1526 (Cloud Service Discovery)",
                 severity="warning",
-                result="blocked" if blocked else "failed",
+                result="blocked" if _is_blocked_error(msg) else "failed",
                 details=msg[:500],
             )
 
@@ -372,10 +396,15 @@ class AttackSimulator:
         )
 
         try:
-            bsc = BlobServiceClient(account_url=account_url, credential=self._credential)
+            bsc = BlobServiceClient(
+                account_url=account_url,
+                credential=self._credential,
+            )
 
-            # Check the container exists (or access is denied).
-            containers = [c["name"] for c in bsc.list_containers(name_starts_with=container)]
+            containers = [
+                c["name"]
+                for c in bsc.list_containers(name_starts_with=container)
+            ]
             if self._stopped():
                 return
 
@@ -445,16 +474,15 @@ class AttackSimulator:
                 result="success",
                 details=f"Downloaded {len(data)} bytes from '{blob}' (first 1MB max; content not logged).",
             )
-        except Exception as e:  # noqa: BLE001
+        except Exception as e:
             msg = f"{type(e).__name__}: {e}"
-            blocked = "forbidden" in msg.lower() or "permission" in msg.lower() or "authorization" in msg.lower()
             self._emit(
                 step="Storage exfiltration attempt",
                 target=f"{account_url}/{container}",
                 mitre_tactic="Exfiltration",
                 mitre_technique="T1020 (Automated Exfiltration)",
                 severity="critical",
-                result="blocked" if blocked else "failed",
+                result="blocked" if _is_blocked_error(msg) else "failed",
                 details=msg[:500],
             )
 
@@ -464,7 +492,8 @@ class AttackSimulator:
 simulator = AttackSimulator()
 
 app = Flask(__name__)
-CORS(app)
+# Only the local dashboard should call an API that can trigger Azure activity.
+CORS(app, origins=["http://localhost:5173", "http://127.0.0.1:5173"])
 
 
 @app.get("/events")
@@ -505,6 +534,5 @@ def healthz() -> Any:
 
 
 if __name__ == "__main__":
-    # In a demo setting, bind to localhost only.
+    # Localhost-only because /start-attack has no auth and calls Azure.
     app.run(host="127.0.0.1", port=5000, debug=False)
-
