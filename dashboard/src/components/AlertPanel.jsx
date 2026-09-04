@@ -26,10 +26,10 @@ export default function AlertPanel({ events, counts }) {
   }, [events, filter]);
 
   return (
-    <section className="glass rounded-2xl p-4">
+    <section className="glass flex h-full flex-col rounded-2xl p-4">
       <div className="flex items-center justify-between gap-2">
         <h2 className="text-sm font-semibold tracking-wide text-slate-100">
-          Alertes
+          Alerts
         </h2>
         <div className="flex items-center gap-2 text-xs">
           <button
@@ -75,10 +75,10 @@ export default function AlertPanel({ events, counts }) {
         </div>
       </div>
 
-      <div className="mt-3 space-y-3">
+      <div className="mt-3 min-h-0 flex-1 space-y-3 overflow-auto pr-1">
         {items.length === 0 ? (
           <div className="rounded-xl border border-white/10 bg-white/5 p-4 text-sm text-slate-300">
-            Aucun événement correspondant au filtre.
+            No events match this filter.
           </div>
         ) : (
           items.map((e) => (
