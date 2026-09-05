@@ -3,23 +3,26 @@ from __future__ import annotations
 import os
 from dataclasses import dataclass
 
+# Fail closed instead of falling back to default Azure targets.
+REQUIRED_ENV_VARS = (
+    "AZURE_SUBSCRIPTION_ID",
+    "AZURE_RESOURCE_GROUP",
+    "AZURE_KEYVAULT_NAME",
+    "AZURE_STORAGE_ACCOUNT_NAME",
+)
 
-SUBSCRIPTION_ID = "REDACTED-SUBSCRIPTION-ID"
-TENANT_ID = "REDACTED-TENANT-ID"
-KEYVAULT_NAME = "redacted-keyvault"
-STORAGE_ACCOUNT_NAME = "redacted-storage"
-RESOURCE_GROUP = "redacted-resource-group"
-LOCATION = "uaenorth"
+
+class ConfigError(RuntimeError):
+    """Required Azure lab configuration is missing."""
 
 
 @dataclass(frozen=True)
 class AzureConfig:
     subscription_id: str
-    tenant_id: str
     resource_group: str
     keyvault_name: str
+    keyvault_secret_name: str
     storage_account_name: str
-    location: str
     storage_container_name: str
 
     @property
@@ -32,17 +35,21 @@ class AzureConfig:
 
 
 def load_config() -> AzureConfig:
-    """
-    Loads config from environment variables so the simulator can run in demos
-    without hardcoding secrets into source control.
-    """
+    missing = [
+        name for name in REQUIRED_ENV_VARS if not os.environ.get(name, "").strip()
+    ]
+    if missing:
+        raise ConfigError(
+            "Missing required Azure lab configuration: "
+            + ", ".join(missing)
+            + ". Copy .env.example to .env at the project root and fill in your lab values."
+        )
+
     return AzureConfig(
-        subscription_id=os.environ.get("AZURE_SUBSCRIPTION_ID", SUBSCRIPTION_ID).strip(),
-        tenant_id=os.environ.get("AZURE_TENANT_ID", TENANT_ID).strip(),
-        resource_group=os.environ.get("AZURE_RESOURCE_GROUP", RESOURCE_GROUP).strip(),
-        keyvault_name=os.environ.get("AZURE_KEYVAULT_NAME", KEYVAULT_NAME).strip(),
-        storage_account_name=os.environ.get("AZURE_STORAGE_ACCOUNT_NAME", STORAGE_ACCOUNT_NAME).strip(),
-        location=os.environ.get("AZURE_LOCATION", LOCATION).strip(),
+        subscription_id=os.environ["AZURE_SUBSCRIPTION_ID"].strip(),
+        resource_group=os.environ["AZURE_RESOURCE_GROUP"].strip(),
+        keyvault_name=os.environ["AZURE_KEYVAULT_NAME"].strip(),
+        keyvault_secret_name=os.environ.get("AZURE_KEYVAULT_SECRET_NAME", "").strip(),
+        storage_account_name=os.environ["AZURE_STORAGE_ACCOUNT_NAME"].strip(),
         storage_container_name=os.environ.get("AZURE_STORAGE_CONTAINER_NAME", "demo").strip(),
     )
-

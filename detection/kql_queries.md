@@ -1,49 +1,62 @@
-## Azure Identity Threat Simulator — KQL (Log Analytics / Sentinel)
+## Azure Threat Simulation Lab - KQL (Log Analytics / Sentinel)
 
-> Objectif: détecter des comportements typiques "token volé" / découverte / exfiltration.
-> Adapte les noms (Key Vault, Storage, RG) à ton environnement.
+> Adapt resource names, table availability, and time windows to your lab.
 
-### 1) Accès Key Vault (lecture de secrets, échecs/403)
+### 1) Key Vault secret access
+
+```kusto
+AzureDiagnostics
+| where TimeGenerated > ago(2h)
+| where ResourceProvider == "MICROSOFT.KEYVAULT"
+| where OperationName in ("SecretList", "SecretGet")
+| project TimeGenerated, OperationName, ResultType, ResultSignature, CallerIPAddress,
+          identity_claim_appid_g, identity_claim_oid_g, ResourceId
+| order by TimeGenerated desc
+```
+
+### 2) Scheduled query alert condition
 
 ```kusto
 AzureDiagnostics
 | where ResourceProvider == "MICROSOFT.KEYVAULT"
-| where Category in ("AuditEvent", "AzurePolicyEvaluationDetails")
-| where OperationName has_any ("SecretGet", "SecretList", "VaultGet", "VaultList")
-| project TimeGenerated, OperationName, ResultType, ResultSignature, CallerIPAddress, identity_claim_appid_g, identity_claim_oid_g, ResourceId
-| order by TimeGenerated desc
+| where OperationName == "SecretGet"
 ```
 
-### 2) Détection "token replay"/sign-in anormal (si logs Entra ID ingérés)
+### 3) Unusual Entra sign-in failures, if Entra logs are ingested
 
 ```kusto
 SigninLogs
 | where ResultType != 0
-| summarize failures=count(), apps=make_set(AppDisplayName, 10) by UserPrincipalName, IPAddress, bin(TimeGenerated, 15m)
+| summarize failures=count(), apps=make_set(AppDisplayName, 10)
+    by UserPrincipalName, IPAddress, bin(TimeGenerated, 15m)
 | where failures >= 5
 | order by TimeGenerated desc
 ```
 
-### 3) Énumération Azure Resource Manager (liste resources / 403)
+### 4) Azure Resource Manager enumeration
 
 ```kusto
 AzureActivity
+| where TimeGenerated > ago(2h)
 | where OperationNameValue has "Microsoft.Resources/subscriptions/resourceGroups/resources/read"
    or OperationNameValue has "Microsoft.Resources/subscriptions/resourceGroups/resources/write"
-| project TimeGenerated, Caller, CallerIpAddress, ActivityStatusValue, OperationNameValue, ResourceGroup, SubscriptionId
+| project TimeGenerated, Caller, CallerIpAddress, ActivityStatusValue,
+          OperationNameValue, ResourceGroup, SubscriptionId
 | order by TimeGenerated desc
 ```
 
-### 4) Storage Account — list containers/blobs, downloads
+### 5) Storage container/blob listing and sample downloads
 
 ```kusto
 StorageBlobLogs
-| where OperationName in ("ListBlobs", "GetBlob", "ListContainers")
-| project TimeGenerated, OperationName, StatusCode, AuthenticationType, CallerIpAddress, Uri, AccountName
+| where TimeGenerated > ago(2h)
+| where OperationName in ("ListContainers", "GetBlob", "GetBlobProperties")
+| project TimeGenerated, OperationName, StatusCode, AuthenticationType,
+          CallerIpAddress, Uri, AccountName
 | order by TimeGenerated desc
 ```
 
-### 5) Corrélation simple "Kill chain" (KV -> ARM -> Storage sur une fenêtre)
+### 6) Simple Key Vault -> ARM -> Storage correlation
 
 ```kusto
 let window = 30m;
@@ -65,4 +78,3 @@ kv
 | project kvTime, armTime, stTime, kvIP, kvCaller, armCaller
 | order by kvTime desc
 ```
-
