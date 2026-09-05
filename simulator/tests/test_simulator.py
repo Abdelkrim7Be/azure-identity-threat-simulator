@@ -1,3 +1,4 @@
+import threading
 from unittest.mock import MagicMock, patch
 
 import attack_simulator as sim_module
@@ -21,8 +22,21 @@ def test_no_attacker_credential_emits_failure_event_and_stops():
 
 def test_start_twice_is_rejected_while_running():
     simulator = sim_module.AttackSimulator()
+    started = threading.Event()
+    release = threading.Event()
+
+    def hold_run_open():
+        started.set()
+        release.wait(timeout=5)
+        with simulator._lock:
+            simulator._running = False
+
+    simulator._run = hold_run_open
+
     assert simulator.start() is True
+    assert started.wait(timeout=5) is True
     assert simulator.start() is False
+    release.set()
     simulator._thread.join(timeout=5)
 
 
