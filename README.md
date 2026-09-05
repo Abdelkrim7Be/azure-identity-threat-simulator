@@ -6,7 +6,7 @@
 
 <p align="center">
   <a href="https://github.com/Abdelkrim7Be/azure-identity-threat-simulator/actions/workflows/ci.yml">
-    <img alt="CI" src="https://img.shields.io/github/actions/workflow/status/Abdelkrim7Be/azure-identity-threat-simulator/ci.yml?branch=main&label=CI&style=for-the-badge&logo=githubactions&logoColor=white">
+    <img alt="CI" src="https://github.com/Abdelkrim7Be/azure-identity-threat-simulator/actions/workflows/ci.yml/badge.svg?branch=main">
   </a>
 </p>
 
