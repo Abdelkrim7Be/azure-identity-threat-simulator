@@ -4,5 +4,5 @@ azure-storage-blob>=12.20.0
 Flask>=3.0.0
 flask-cors>=4.0.0
 python-dotenv>=1.0.1
-requests>=2.32.0
+requests>=2.34.2
 
