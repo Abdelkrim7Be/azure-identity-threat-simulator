@@ -21,14 +21,14 @@ const MITRE_ORDER = [
 ];
 
 function tacticAccent(tactic) {
-  if (tactic === "Initial Access") return "#60a5fa";
-  if (tactic === "Credential Access") return "#ff1744";
-  if (tactic === "Discovery") return "#a78bfa";
-  if (tactic === "Collection") return "#e879f9";
+  if (tactic === "Initial Access") return "#38bdf8";
+  if (tactic === "Credential Access") return "#f87171";
+  if (tactic === "Discovery") return "#818cf8";
+  if (tactic === "Collection") return "#22d3ee";
   if (tactic === "Exfiltration") return "#f59e0b";
   if (tactic === "Impact") return "#34d399";
-  if (tactic === "Execution") return "#22d3ee";
-  return "#a1a1aa";
+  if (tactic === "Execution") return "#60a5fa";
+  return "#94a3b8";
 }
 
 export default function ThreatMap({ events }) {
@@ -117,49 +117,49 @@ export default function ThreatMap({ events }) {
   }, [techniqueList]);
 
   return (
-    <section className="glass rounded-2xl p-4">
-      <div className="flex flex-col gap-1 md:flex-row md:items-end md:justify-between">
+    <section className="rounded-md border border-slate-800 bg-[#0b1220]/92">
+      <div className="flex flex-col gap-1 border-b border-slate-800 px-4 py-3 md:flex-row md:items-end md:justify-between">
         <div>
-          <h2 className="text-sm font-semibold tracking-wide text-slate-100">
+          <h2 className="text-[16px] font-normal text-slate-50">
             MITRE ATT&amp;CK Threat Map
           </h2>
-          <div className="mt-1 text-xs text-slate-400">
+          <div className="mt-1 text-[13px] text-slate-400">
             Event distribution by tactic.
           </div>
         </div>
-        <div className="text-xs text-slate-300">
+        <div className="text-[13px] text-slate-400">
           Techniques seen:{" "}
-          <span className="text-slate-100">{techniqueList.length}</span>
+          <span className="font-normal text-slate-100">{techniqueList.length}</span>
         </div>
       </div>
 
-      <div className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-12">
+      <div className="grid grid-cols-1 gap-4 p-4 lg:grid-cols-12">
         <div className="lg:col-span-7">
-          <div className="h-[420px] rounded-xl border border-white/10 bg-white/5 p-3">
+          <div className="h-[420px] bg-[#0b1220] p-3">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart
                 data={data}
                 margin={{ top: 10, right: 10, left: 0, bottom: 10 }}
               >
-                <CartesianGrid stroke="rgba(255,255,255,0.06)" />
+                <CartesianGrid stroke="#1e293b" vertical={false} />
                 <XAxis
                   dataKey="tactic"
-                  tick={{ fill: "rgba(226,232,240,0.75)", fontSize: 11 }}
+                  tick={{ fill: "#94a3b8", fontSize: 13 }}
                 />
                 <YAxis
-                  tick={{ fill: "rgba(226,232,240,0.75)", fontSize: 11 }}
+                  tick={{ fill: "#94a3b8", fontSize: 13 }}
                   allowDecimals={false}
                 />
                 <Tooltip
                   contentStyle={{
-                    background: "rgba(11,18,32,0.9)",
-                    border: "1px solid rgba(255,255,255,0.10)",
-                    borderRadius: 12,
+                    background: "#0f172a",
+                    border: "1px solid #334155",
+                    borderRadius: 6,
                   }}
-                  labelStyle={{ color: "rgba(226,232,240,0.9)" }}
-                  itemStyle={{ color: "rgba(226,232,240,0.9)" }}
+                  labelStyle={{ color: "#f8fafc" }}
+                  itemStyle={{ color: "#e2e8f0" }}
                 />
-                <Bar dataKey="count" radius={[8, 8, 0, 0]}>
+                <Bar dataKey="count" radius={[3, 3, 0, 0]}>
                   {data.map((entry) => (
                     <Cell key={`bar-${entry.tactic}`} fill={entry.color} />
                   ))}
@@ -170,39 +170,41 @@ export default function ThreatMap({ events }) {
         </div>
 
         <div className="lg:col-span-5">
-          <div className="flex h-[420px] flex-col rounded-xl border border-white/10 bg-white/5 p-3">
-            <div className="text-xs font-semibold tracking-wide text-slate-200">
+          <div className="flex h-[420px] flex-col rounded-md border border-slate-800 bg-[#0b1220]">
+            <div className="border-b border-slate-800 px-3 py-2 text-[16px] font-normal text-slate-50">
               Techniques
             </div>
-            <div className="mt-2 grid grid-cols-1 gap-2 overflow-auto pr-1">
+            <div className="min-h-0 flex-1 overflow-auto">
               {techniqueList.length === 0 ? (
-                <div className="text-sm text-slate-300">
+                <div className="p-3 text-[15px] text-slate-400">
                   No techniques yet.
                 </div>
               ) : (
-                techniqueList.map((t) => (
-                  <div
-                    key={`${t.tactic}-${t.technique}`}
-                    title={
-                      techniqueDescription[t.technique] ||
-                      "Technique observed during the simulation."
-                    }
-                    className={`rounded-lg border border-white/10 bg-white/5 px-3 py-2 ${
-                      newTechniques.has(`${t.tactic}::${t.technique}`)
-                        ? "technique-pulse"
-                        : ""
-                    }`}
-                  >
-                    <div className="text-[11px] text-slate-400">{t.tactic}</div>
-                    <div className="text-sm font-medium text-slate-100">
-                      {t.technique}
+                <div className="divide-y divide-slate-800/70">
+                  {techniqueList.map((t) => (
+                    <div
+                      key={`${t.tactic}-${t.technique}`}
+                      title={
+                        techniqueDescription[t.technique] ||
+                        "Technique observed during the simulation."
+                      }
+                      className={`px-3 py-2.5 hover:bg-slate-900/70 ${
+                        newTechniques.has(`${t.tactic}::${t.technique}`)
+                          ? "technique-pulse"
+                          : ""
+                      }`}
+                    >
+                      <div className="text-[14px] text-sky-300/80">{t.tactic}</div>
+                      <div className="text-[14px] font-normal text-slate-100">
+                        {t.technique}
+                      </div>
+                      <div className="mt-1 text-[14px] leading-5 text-slate-400">
+                        {techniqueDescription[t.technique] ||
+                          "Technique observed during the simulation."}
+                      </div>
                     </div>
-                    <div className="mt-1 text-[11px] text-slate-400">
-                      {techniqueDescription[t.technique] ||
-                        "Technique observed during the simulation."}
-                    </div>
-                  </div>
-                ))
+                  ))}
+                </div>
               )}
             </div>
           </div>

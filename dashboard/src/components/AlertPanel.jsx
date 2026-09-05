@@ -1,15 +1,15 @@
 import { useMemo, useState } from "react";
 
-function sevStyle(sev) {
-  if (sev === "critical") return "border-neon-red/35 bg-neon-red/10";
-  if (sev === "warning") return "border-amber-300/35 bg-amber-300/10";
-  return "border-white/10 bg-white/5";
+function sevText(sev) {
+  if (sev === "critical") return "text-red-300";
+  if (sev === "warning") return "text-amber-300";
+  return "text-sky-300";
 }
 
-function sevText(sev) {
-  if (sev === "critical") return "text-neon-red";
-  if (sev === "warning") return "text-amber-200";
-  return "text-slate-200";
+function filterButton(active) {
+  return active
+    ? "filter-chip-active"
+    : "filter-chip-idle";
 }
 
 export default function AlertPanel({ events, counts }) {
@@ -26,90 +26,100 @@ export default function AlertPanel({ events, counts }) {
   }, [events, filter]);
 
   return (
-    <section className="glass flex h-full flex-col rounded-2xl p-4">
-      <div className="flex items-center justify-between gap-2">
-        <h2 className="text-sm font-semibold tracking-wide text-slate-100">
-          Alerts
-        </h2>
-        <div className="flex items-center gap-2 text-xs">
+    <section className="flex h-full flex-col rounded-md border border-slate-800 bg-[#0b1220]/92">
+      <div className="flex flex-wrap items-start justify-between gap-3 border-b border-slate-800 px-4 py-3">
+        <div>
+          <h2 className="text-[16px] font-normal text-slate-50">
+            Alerts
+          </h2>
+          <div className="mt-0.5 text-[14px] text-slate-400">
+            Recent simulator events by severity.
+          </div>
+        </div>
+        <div className="flex flex-wrap items-center gap-2 text-[13px]">
           <button
             onClick={() => setFilter("all")}
-            className={`rounded-md border px-2 py-1 ${
-              filter === "all"
-                ? "border-neon-green/30 bg-neon-green/10 text-neon-green"
-                : "border-white/10 bg-white/5 text-slate-300"
-            }`}
+            className={`filter-chip font-normal ${filterButton(filter === "all")}`}
           >
             All
           </button>
           <button
             onClick={() => setFilter("critical")}
-            className={`rounded-md border px-2 py-1 ${
-              filter === "critical"
-                ? "border-neon-red/35 bg-neon-red/10 text-neon-red"
-                : "border-white/10 bg-white/5 text-slate-300"
-            }`}
+            className={`filter-chip font-normal ${filterButton(filter === "critical")}`}
           >
             Critical ({counts?.critical ?? 0})
           </button>
           <button
             onClick={() => setFilter("warning")}
-            className={`rounded-md border px-2 py-1 ${
-              filter === "warning"
-                ? "border-amber-300/35 bg-amber-300/10 text-amber-200"
-                : "border-white/10 bg-white/5 text-slate-300"
-            }`}
+            className={`filter-chip font-normal ${filterButton(filter === "warning")}`}
           >
             Warning ({counts?.warning ?? 0})
           </button>
           <button
             onClick={() => setFilter("info")}
-            className={`rounded-md border px-2 py-1 ${
-              filter === "info"
-                ? "border-white/15 bg-white/10 text-slate-100"
-                : "border-white/10 bg-white/5 text-slate-300"
-            }`}
+            className={`filter-chip font-normal ${filterButton(filter === "info")}`}
           >
             Info ({counts?.info ?? 0})
           </button>
         </div>
       </div>
 
-      <div className="mt-3 min-h-0 flex-1 space-y-3 overflow-auto pr-1">
+      <div className="min-h-0 flex-1 overflow-auto">
+        <div className="hidden grid-cols-[minmax(0,1fr)_92px] border-b border-slate-800 bg-slate-950/50 px-4 py-2 text-[14px] font-normal text-slate-500 lg:grid">
+          <div>Alert</div>
+          <div className="text-right">Time</div>
+        </div>
         {items.length === 0 ? (
-          <div className="rounded-xl border border-white/10 bg-white/5 p-4 text-sm text-slate-300">
-            No events match this filter.
+          <div className="grid grid-cols-1 gap-2 border-b border-slate-800 px-4 py-4 text-[14px] text-slate-400 lg:grid-cols-[minmax(0,1fr)_92px]">
+            <div>
+              <div className="text-slate-100">No matching alerts</div>
+              <div className="mt-1 text-[14px] text-slate-500">
+                The selected queue is clear.
+              </div>
+              <div className="mt-5 grid grid-cols-3 gap-2 text-[14px] text-slate-500">
+                <div className="rounded-md border border-slate-800 bg-slate-950/35 px-2 py-2">
+                  Critical: {counts?.critical ?? 0}
+                </div>
+                <div className="rounded-md border border-slate-800 bg-slate-950/35 px-2 py-2">
+                  Warning: {counts?.warning ?? 0}
+                </div>
+                <div className="rounded-md border border-slate-800 bg-slate-950/35 px-2 py-2">
+                  Info: {counts?.info ?? 0}
+                </div>
+              </div>
+            </div>
+            <div className="text-[14px] text-slate-500 lg:text-right">--</div>
           </div>
         ) : (
-          items.map((e) => (
-            <div
-              key={e.id}
-              className={`rounded-xl border p-3 ${sevStyle(e.severity)}`}
-            >
-              <div className="flex items-start justify-between gap-3">
+          <div className="divide-y divide-slate-800/70">
+            {items.map((e) => (
+              <div
+                key={e.id}
+                className="grid grid-cols-1 gap-2 bg-[#0b1220] px-4 py-2.5 hover:bg-slate-900/70 lg:grid-cols-[minmax(0,1fr)_92px]"
+              >
                 <div className="min-w-0">
                   <div
-                    className={`text-xs font-semibold ${sevText(e.severity)}`}
+                    className={`text-[14px] font-normal ${sevText(e.severity)}`}
                   >
-                    {String(e.severity).toUpperCase()} · {e.result}
+                    {String(e.severity)} · {e.result}
                   </div>
-                  <div className="mt-1 truncate text-sm font-medium text-slate-100">
+                  <div className="mt-1 truncate text-[14px] font-normal text-slate-100">
                     {e.step}
                   </div>
-                  <div className="mt-1 truncate text-xs text-slate-300">
+                  <div className="mt-1 break-words text-[13px] leading-5 text-slate-400">
                     {e.target}
                   </div>
+                  <div className="mt-1 text-[14px] leading-5 text-slate-400">
+                    <span className="font-normal text-slate-500">MITRE:</span> {e.mitre_tactic}{" "}
+                    · {e.mitre_technique}
+                  </div>
                 </div>
-                <div className="shrink-0 text-[11px] text-slate-200">
+                <div className="text-[14px] text-slate-500 lg:text-right">
                   {new Date(e.ts).toLocaleTimeString()}
                 </div>
               </div>
-              <div className="mt-2 text-[11px] text-slate-300">
-                <span className="text-slate-400">MITRE:</span> {e.mitre_tactic}{" "}
-                · {e.mitre_technique}
-              </div>
-            </div>
-          ))
+            ))}
+          </div>
         )}
       </div>
     </section>
