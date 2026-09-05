@@ -1,6 +1,26 @@
-# Azure Threat Simulation Lab
+<h1 align="center">Azure Threat Simulation Lab</h1>
 
-[![CI](https://github.com/Abdelkrim7Be/azure-identity-threat-simulator/actions/workflows/ci.yml/badge.svg)](https://github.com/Abdelkrim7Be/azure-identity-threat-simulator/actions/workflows/ci.yml)
+<p align="center">
+  Controlled Azure identity attack simulation with local telemetry, KQL detection, and alerting.
+</p>
+
+<p align="center">
+  <a href="https://github.com/Abdelkrim7Be/azure-identity-threat-simulator/actions/workflows/ci.yml">
+    <img alt="CI" src="https://img.shields.io/github/actions/workflow/status/Abdelkrim7Be/azure-identity-threat-simulator/ci.yml?branch=main&label=CI&style=for-the-badge&logo=githubactions&logoColor=white">
+  </a>
+</p>
+
+<p align="center">
+  <img alt="Azure" src="https://img.shields.io/badge/Azure-0078D4?style=for-the-badge&logo=microsoftazure&logoColor=white">
+  <img alt="Microsoft Entra ID" src="https://img.shields.io/badge/Microsoft%20Entra%20ID-0078D4?style=for-the-badge&logo=microsoft&logoColor=white">
+  <img alt="Python" src="https://img.shields.io/badge/Python-3776AB?style=for-the-badge&logo=python&logoColor=white">
+  <img alt="Flask" src="https://img.shields.io/badge/Flask-000000?style=for-the-badge&logo=flask&logoColor=white">
+  <img alt="React" src="https://img.shields.io/badge/React-149ECA?style=for-the-badge&logo=react&logoColor=white">
+  <img alt="Vite" src="https://img.shields.io/badge/Vite-646CFF?style=for-the-badge&logo=vite&logoColor=white">
+  <img alt="Tailwind CSS" src="https://img.shields.io/badge/Tailwind%20CSS-06B6D4?style=for-the-badge&logo=tailwindcss&logoColor=white">
+  <img alt="KQL" src="https://img.shields.io/badge/KQL-5E5E5E?style=for-the-badge&logo=microsoft&logoColor=white">
+  <img alt="MITRE ATT&CK" src="https://img.shields.io/badge/MITRE%20ATT%26CK-E2231A?style=for-the-badge&logoColor=white">
+</p>
 
 Azure Threat Simulation Lab is a small cloud-security proof of concept that runs controlled identity-driven activity against dedicated Azure lab resources, displays the simulated attack sequence in a local dashboard, and verifies the resulting Azure telemetry with Log Analytics, KQL, and an Azure scheduled query alert.
 
@@ -49,7 +69,7 @@ flowchart TD
 
     subgraph response["Separate response experiment"]
         defender["Defender for Cloud alert"] --> logic["redacted-logic-app<br/>Logic App"]
-        logic --> graph["Microsoft Graph PATCH"]
+        logic --> msgraph["Microsoft Graph PATCH"]
         logic --> gmail["Gmail notification"]
     end
 ```
