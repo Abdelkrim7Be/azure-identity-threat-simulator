@@ -1,5 +1,5 @@
 azure-identity>=1.17.0
-azure-keyvault-secrets>=4.8.0
+azure-keyvault-secrets>=4.11.2
 azure-storage-blob>=12.20.0
 Flask>=3.0.0
 flask-cors>=4.0.0
